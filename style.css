@@ -1,0 +1,862 @@
+/* 文字はすべて M+1p Heavy(800)。小さい文字だけ個別に Bold(700) に落としている。
+   html/body にだけ太さを置き、あとは親から受け継がせる（下の要素は、
+   見出しなどがブラウザ既定で勝手に太くなるのを打ち消して受け継ぎに戻す）。 */
+html, body { font-weight: 800; }
+h1, h2, h3, h4, h5, h6, b, strong, th, summary,
+button, input, select, textarea, option, optgroup, legend { font-weight: inherit; }
+
+:root {
+  --primary: #9b6bd6;
+  --primary-dark: #6f3fb0;
+  --primary-light: #f2ebfd;
+  --accent: #7c5b9e;
+  --gold: #f5a623;
+  --gold-bg: #fff8e6;
+  --blue: #2d88ff;
+  --blue-bg: #edf5ff;
+  --bg: #f8f3ff;
+  --card-bg: #ffffff;
+  --text-main: #2e2540;
+  --text-sub: #7a6b92;
+  --border: #e6dcf7;
+  --radius: 16px;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(111, 63, 176, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:"M PLUS 1p",-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  background-color: var(--bg);
+  color: var(--text-main);
+  line-height: 1.5;
+  padding: 12px 12px 60px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* ヘッダー */
+header {
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 12px 0 6px;
+}
+
+.mascot-wrap {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* ミュウ（ハイビスカスランプの代わり）。一定の点数を超えて .lit が付くまでは
+   存在ごと消しておく。薄く出しておくより、何もない所から急に現れる方が驚きがある。
+   display を切り替えるので、点灯のたびにアニメーションが頭から流れ直す。 */
+.hibiscus-lamp {
+  /* ここの2つが点滅の調整つまみ */
+  --appear-dur: 0.5s;    /* 出てくる時の動き（大きさ）にかける時間 */
+  --blink-cycle: 0.15s;  /* 点滅の周期。小さいほど速い */
+
+  display: none;
+  /* ミュウの絵は縦長なので、幅ではなく高さで大きさを決める。
+     こうすると中央のミュウツーと背の高さがそろう。 */
+  height: 92px;
+  max-height: 22vw;
+  width: auto;
+}
+
+/* 光った見た目は filter でも指定しておく。
+   アニメーション任せにすると、動きが止まる環境（裏タブ・省電力・
+   prefers-reduced-motion）で光っていない絵のままになってしまう。 */
+.hibiscus-lamp.lit {
+  display: block;
+  transform: scale(1.06);
+  /* ミュウの絵は色がうすいので、こく見せる工夫を3つ重ねている。
+     saturate=色をこく／1つ目のdrop-shadow=濃いピンクの細いふちどり／
+     2つ目のdrop-shadow=まわりのぼんやりした光。
+     ふちどりが無いと、白っぽい背景に溶けて見えなくなる。 */
+  filter:
+    saturate(1.6) contrast(1.1)
+    drop-shadow(0 0 1.5px rgba(196, 40, 126, 0.95))
+    drop-shadow(0 0 3px rgba(196, 40, 126, 0.55))
+    drop-shadow(0 0 16px rgba(190, 110, 255, 0.9));
+  animation:
+    lampAppear var(--appear-dur) ease-out both,
+    lampAlt var(--blink-cycle) step-end infinite;
+}
+
+/* 左側は絵を左右反転させて、2匹が向かい合っているように見せる。
+   scaleX(-1) を先頭に付けて全体を鏡に映す形にしているので、
+   拡大や回転もそのまま反転して付いてくる。
+   （反転ぶんだけ別のキーフレーム lampAppearFlip を用意している） */
+#lampLeft.lit {
+  transform: scaleX(-1) scale(1.06);
+  animation:
+    lampAppearFlip var(--appear-dur) ease-out both,
+    lampAlt var(--blink-cycle) step-end infinite;
+}
+
+/* 右側は半周期ぶん進んだ位置から始めて、左右が交互に光るようにする
+   （沖ドキのハイビスカスと同じ動き）。
+   遅延を正の値にすると、その間だけ右が出てこず「左が先に光る」ので、
+   負の遅延で最初のコマから逆位相にしている。 */
+#lampRight.lit {
+  animation-delay: 0s, calc(var(--blink-cycle) / -2);
+}
+
+/* 出てくる瞬間の動き。大きさだけを扱い、opacity には触れない。
+   ここで opacity を動かすと点滅（lampAlt）と取り合いになり、
+   出てくる間だけ左右が揃って光ってしまう。 */
+@keyframes lampAppear {
+  0%   { transform: scale(0.4) rotate(-12deg); }
+  55%  { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1.06) rotate(0deg); }
+}
+
+/* 上と同じ動きの、左右反転版（左側のミュウ用） */
+@keyframes lampAppearFlip {
+  0%   { transform: scaleX(-1) scale(0.4) rotate(-12deg); }
+  55%  { transform: scaleX(-1) scale(1.2) rotate(5deg); }
+  100% { transform: scaleX(-1) scale(1.06) rotate(0deg); }
+}
+
+/* 点いたあとの点滅。実機の映像を実測したところ
+   1周期150ms（点灯83ms/消灯67ms）で、左右がきっちり逆位相だった。
+   フェードは挟まず瞬時に切り替わるので step-end で当てている。 */
+@keyframes lampAlt {
+  0% {
+    opacity: 1;
+    filter:
+      saturate(1.8) contrast(1.15)
+      drop-shadow(0 0 1.5px rgba(196, 40, 126, 1))
+      drop-shadow(0 0 3px rgba(196, 40, 126, 0.6))
+      drop-shadow(0 0 22px rgba(180, 95, 255, 0.95));
+  }
+  50% {
+    opacity: 0.1;
+    filter: saturate(0.5) brightness(0.9);
+  }
+}
+
+/* 動きを控える設定なら、点滅させず光った状態で静止させる。
+   左側は #lampLeft.lit の指定の方が強いので、こちらも個別に止める。 */
+@media (prefers-reduced-motion: reduce) {
+  .hibiscus-lamp.lit,
+  #lampLeft.lit {
+    animation: none;
+  }
+}
+
+.header-mascot {
+  /* mewtwo.png は背景ごと描かれた1枚絵なので、角を丸めて
+     「絵として置いてある」ように見せる（切り抜き画像ではないため） */
+  border-radius: 14px;
+  width: 96px;
+  height: auto;
+  max-height: 100px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(111, 63, 176, 0.25));
+  animation: floatMascot 3s ease-in-out infinite alternate;
+}
+
+@keyframes floatMascot {
+  0% { transform: translateY(0px) rotate(-1deg); }
+  100% { transform: translateY(-5px) rotate(1.5deg); }
+}
+
+.flashy-title {
+  font-size: 1.85rem;
+  font-weight:800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #6a1fb8 0%, #9b4dd8 50%, #c78af0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(106, 31, 184, 0.35));
+  display: inline-block;
+  transform: perspective(400px) rotateX(4deg);
+  margin: 2px 0 4px;
+  line-height: 1.25;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  font-weight:700;
+  color: #6f3fb0;
+  letter-spacing: 0.08em;
+}
+
+.card-mascot-icon {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  background: var(--primary-light);
+  border: 1.5px solid #d9c4f2;
+  border-radius: 10px;
+}
+
+/* 画像ドロップエリア */
+.upload-card {
+  background: var(--card-bg);
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.upload-card:hover, .upload-card.dragover {
+  background: var(--primary-light);
+  border-color: var(--primary-dark);
+}
+
+.upload-card input[type="file"] {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-icon {
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.upload-text {
+  font-weight:800;
+  font-size: 0.95rem;
+  color: var(--primary-dark);
+}
+
+.upload-subtext {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-top: 4px;font-weight:700
+}
+
+.ocr-progress {
+  display: none;
+  margin-top: 12px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: #edf2f7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+  transition: width 0.3s ease;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-top: 4px;font-weight:700
+}
+
+/* ============================================================
+   スクショ用 結果カード (メイン)
+   ============================================================ */
+.result-card {
+  background: #ffffff;
+  border: 2px solid #e9dcfa;
+  border-radius: 20px;
+  padding: 20px 16px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.result-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 6px;
+  background: linear-gradient(90deg, #9b6bd6, #b98ae0, #a0aec0);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.pokemon-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pokemon-badge {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight:800;
+  font-size: 0.85rem;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+.sp-badge {
+  background: #edf2f7;
+  color: var(--text-main);
+  font-weight:700;
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+.score-main {
+  text-align: right;
+}
+
+.score-title {
+  font-size: 0.75rem;
+  font-weight:700;
+  color: var(--primary-dark);
+  text-transform: uppercase;
+}
+
+.score-number-wrap {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.score-val {
+  font-size: 2.5rem;
+  font-weight:800;
+  color: var(--primary-dark);
+  line-height: 1;
+  font-feature-settings: "tnum";
+}
+
+.score-unit {
+  font-size: 1rem;
+  font-weight:800;
+  color: var(--primary-dark);
+}
+
+/* スコア内訳リスト */
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.breakdown-item {
+  background: #fafbfc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  /* グリッドの子は既定が min-width:auto なので、長い項目名があると
+     セルが縮まずカードごと横にはみ出す。0にして列幅を守らせる。 */
+  min-width: 0;
+}
+
+.breakdown-item.gold-highlight {
+  background: var(--gold-bg);
+  border-color: #ffd880;
+}
+
+.breakdown-cat {
+  font-size: 0.7rem;
+  color: var(--text-sub);
+  display: block;font-weight:700
+}
+
+.breakdown-name {
+  font-size: 0.82rem;
+  font-weight:700;
+  color: var(--text-main);
+  display: block;
+  /* スクショで共有するカードなので、末尾を「…」で切らずに折り返す */
+  overflow-wrap: anywhere;
+}
+
+.breakdown-score {
+  font-size: 0.85rem;
+  font-weight:800;
+  color: var(--primary-dark);
+  text-align: right;
+}
+
+.breakdown-score.plus {
+  color: #107c41;
+}
+
+.breakdown-score.minus {
+  color: #c5221f;
+}
+
+/* 適用された特別ボーナス */
+.bonus-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.bonus-tag {
+  background: #f4edfd;
+  color: #6a2fa0;
+  border: 1px solid #dcc8f5;
+  font-size: 0.75rem;
+  font-weight:700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.bonus-tag.gold {
+  background: #fff9e6;
+  color: #b78103;
+  border-color: #ffe082;
+}
+
+/* カードフッター */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  font-size: 0.7rem;
+  color: var(--text-sub);font-weight:700
+}
+
+/* ============================================================
+   手動設定・調整フォーム (アコーディオン / 完全選択式)
+   ============================================================ */
+.section-title {
+  font-size: 0.95rem;
+  font-weight:800;
+  margin: 18px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-title::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+.form-group {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
+}
+
+.form-col {
+  flex: 1;
+  min-width: 120px;
+}
+
+label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight:700;
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+
+select, input[type="number"], input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  background: #fff;
+  color: var(--text-main);
+  outline: none;
+  font-family: inherit;
+}
+
+select:focus, input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(155, 107, 214, 0.25);
+}
+
+/* 食材プレビューバッジ */
+.ing-preview-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ing-badge-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 0.72rem;
+  font-weight:700;
+  color: var(--text-main);
+}
+
+.ing-mini-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* サブスキル行 */
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.skill-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.skill-lv-badge {
+  font-size: 0.75rem;
+  font-weight:700;
+  background: #edf2f7;
+  color: var(--text-sub);
+  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 58px;
+  text-align: center;
+}
+
+.skill-lv-badge.discount {
+  background: #f4edfd;
+  color: var(--primary-dark);
+}
+
+.skill-select {
+  flex: 1;
+}
+
+.seed-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  white-space: nowrap;
+  cursor: pointer;font-weight:700
+}
+
+/* ボタングループ / チェックボックス一覧 */
+.chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.chip-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight:700;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.chip-checkbox input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+}
+
+.chip-checkbox:hover {
+  background: var(--primary-light);
+  border-color: #d9c4f2;
+}
+
+.chip-checkbox.checked {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+/* 操作ボタン */
+.btn-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+button.btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight:800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(111, 63, 176, 0.3);
+}
+
+.btn-primary:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--text-main);
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+}
+
+/* 履歴リスト */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-name {
+  font-weight:800;
+  font-size: 0.85rem;
+}
+
+.history-meta {
+  font-size: 0.72rem;
+  color: var(--text-sub);font-weight:700
+}
+
+.history-score {
+  font-size: 1.15rem;
+  font-weight:800;
+  color: var(--primary-dark);
+}
+
+.history-del {
+  background: none;
+  border: none;
+  color: #a0aec0;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 8px;
+}
+
+.history-del:hover {
+  color: #e53e3e;
+}
+
+/* 自動読み取り結果の一覧 */
+.ocr-summary {
+  display: none;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.ocr-summary-head {
+  font-size: 0.82rem;
+  font-weight:700;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ocr-warn {
+  font-size: 0.7rem;
+  font-weight:700;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.ocr-ok-all {
+  font-size: 0.7rem;
+  font-weight:700;
+  color: #2f855a;
+  background: #e6fffa;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.ocr-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
+}
+
+.ocr-summary-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.75rem;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 5px 8px;
+  min-width: 0;font-weight:700
+}
+
+.ocr-summary-item.ng {
+  background: var(--primary-light);
+}
+
+.ocr-key {
+  color: var(--text-sub);
+  font-weight:inherit;
+  white-space: nowrap;
+}
+
+.ocr-summary-item.ng .ocr-key {
+  color: var(--primary-dark);
+}
+
+.ocr-val {
+  font-weight:inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* X投稿用ボタン */
+.btn-share {
+  background: #0f1419;
+  color: #fff;
+}
+
+.btn-share:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.btn-share:disabled {
+  opacity: 0.6;
+  transform: none;
+  cursor: default;
+}
+
+.post-text {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  line-height: 1.6;
+  min-height: 120px;
+  resize: vertical;
+  background: #fff;
+  color: var(--text-main);font-weight:700
+}
+
+/* 特別ボーナスのカード（アップロード欄の上に置いている） */
+.bonus-card {
+  background: var(--card-bg);
+  border: 1px solid #e4d7f7;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.bonus-card-head {
+  font-size: 0.85rem;
+  font-weight:800;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bonus-card-head span {
+  font-size: 0.7rem;
+  font-weight:700;
+  color: var(--text-sub);
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* チェックが入っている項目は見て分かるようにする */
+.chip-checkbox:has(input:checked) {
+  background: var(--primary-light);
+  border-color: #c9aded;
+  color: var(--primary-dark);
+}
