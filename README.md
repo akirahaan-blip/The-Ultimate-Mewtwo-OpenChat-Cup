@@ -45,6 +45,12 @@
 （`vendor/pokesleep-vision/ingredients.js` の PROTOTYPES に色相の実測値が必要なため）。
 SP・性格・サブスキルの読み取りには影響しない。食材は手動で選んでもらう運用になる。
 
+## 🚀 公開URL (GitHub Pages)
+https://akirahaan-blip.github.io/The-Ultimate-Mewtwo-OpenChat-Cup/
+
+公開後の修正は GitHub のWeb画面上で行う運用。手順は `GitHubでの直しかた.txt` を参照。
+手元フォルダと食い違う可能性があるので、**GitHub側を正**として扱うこと。
+
 ## 💻 ローカルで動かす
 ES modules を使っているので `index.html` を直接ダブルクリックしても動かない。
 **`サイトを開く.bat`** をダブルクリックすると、簡易サーバーが立ち上がってブラウザが開く。
