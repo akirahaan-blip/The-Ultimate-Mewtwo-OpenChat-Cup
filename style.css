@@ -77,15 +77,13 @@ header {
 .hibiscus-lamp.lit {
   display: block;
   transform: scale(1.06);
-  /* ミュウの絵は色がうすいので、こく見せる工夫を3つ重ねている。
-     saturate=色をこく／1つ目のdrop-shadow=濃いピンクの細いふちどり／
+  /* ミュウの絵じたいが濃いピンクの線で描かれているので、色を足す加工は要らない。
+     1つ目のdrop-shadow=線のきわを少しだけ締める薄いふちどり／
      2つ目のdrop-shadow=まわりのぼんやりした光。
-     ふちどりが無いと、白っぽい背景に溶けて見えなくなる。 */
+     ここを強くしすぎると、絵の中の色が白くとんで見える。 */
   filter:
-    saturate(1.6) contrast(1.1)
-    drop-shadow(0 0 1.5px rgba(196, 40, 126, 0.95))
-    drop-shadow(0 0 3px rgba(196, 40, 126, 0.55))
-    drop-shadow(0 0 16px rgba(190, 110, 255, 0.9));
+    drop-shadow(0 0 3px rgba(196, 40, 126, 0.45))
+    drop-shadow(0 0 16px rgba(180, 95, 255, 0.9));
   animation:
     lampAppear var(--appear-dur) ease-out both,
     lampAlt var(--blink-cycle) step-end infinite;
@@ -133,9 +131,7 @@ header {
   0% {
     opacity: 1;
     filter:
-      saturate(1.8) contrast(1.15)
-      drop-shadow(0 0 1.5px rgba(196, 40, 126, 1))
-      drop-shadow(0 0 3px rgba(196, 40, 126, 0.6))
+      drop-shadow(0 0 4px rgba(196, 40, 126, 0.55))
       drop-shadow(0 0 22px rgba(180, 95, 255, 0.95));
   }
   50% {

@@ -6,7 +6,7 @@
   <title>＼最強ミュウツーオプチャ杯／ スコア判定</title>
   <!-- ?v= はキャッシュ避け。JS/CSSを更新したらこの数字を上げること。
        これがないと、以前このページを開いた人のブラウザが古いファイルを掴んだままになる。 -->
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
   <!-- Tesseract.js CDN (クライアントサイドOCR) -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <!-- 全体のフォント。M+1p の Heavy(800) と Bold(700) を読み込む -->
@@ -19,9 +19,9 @@
   <header>
     <div class="mascot-wrap">
       <!-- 左右のミュウ。合計800点以上で現れて交互に点滅する（左は絵を反転させている） -->
-      <img src="mew.png" alt="" class="hibiscus-lamp" id="lampLeft">
+      <img src="mew.png?v=19" alt="" class="hibiscus-lamp" id="lampLeft">
       <img src="mewtwo.png" alt="ミュウツー" class="header-mascot">
-      <img src="mew.png" alt="" class="hibiscus-lamp" id="lampRight">
+      <img src="mew.png?v=19" alt="" class="hibiscus-lamp" id="lampRight">
     </div>
     <h1 class="flashy-title">＼最強ミュウツーオプチャ杯／</h1>
     <div class="subtitle">The Ultimate Mewtwo OpenChat Cup</div>
@@ -37,7 +37,7 @@
         <input type="checkbox" id="shinyCheck"> ★ 色違い (+350点)
       </label>
       <label class="chip-checkbox">
-        <input type="checkbox" id="flCheck"> FL10以内 (+100点)
+        <input type="checkbox" id="secondOrderCheck"> 初回注文ボーナス(2匹目) (+100点)
       </label>
     </div>
   </div>
@@ -151,6 +151,6 @@
   <h2 class="section-title">保存履歴</h2>
   <div class="form-group" id="historyList"></div>
 
-  <script type="module" src="app.js?v=18"></script>
+  <script type="module" src="app.js?v=19"></script>
 </body>
 </html>

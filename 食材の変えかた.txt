@@ -29,7 +29,7 @@
 ------------------------------------------------------------
 
 1. エクスプローラー（画面下のフォルダのアイコン）を開く
-2. C: → ユーザー → oauao → Claude →
+2. C: → ユーザー → oauao → Claude → それ以外 →
    The-Ultimate-Mewtwo-OpenChat-Cup フォルダを開く
 3. その中の  ingredients-setting.js  を1回クリックして選ぶ
 4. キーボードで Ctrl+C → そのまま Ctrl+V

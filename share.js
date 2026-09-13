@@ -9,8 +9,8 @@
  * 画面表示とは別に余白や文字サイズを詰めた方が読みやすいため、
  * 同じ内容を Canvas に描き直している。
  */
-import { SUB_SKILLS, INGREDIENTS, INGREDIENT_SCORES, NATURES, NATURE_SCORES } from './scoring.js?v=18';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=18';
+import { SUB_SKILLS, INGREDIENTS, INGREDIENT_SCORES, NATURES, NATURE_SCORES } from './scoring.js?v=19';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=19';
 
 export const HASHTAG = '#最強ミュウツーオプチャ杯';
 
@@ -53,7 +53,7 @@ export function buildPostText(state, result) {
 
   const extras = [];
   if (state.isShiny) extras.push('★色違い');
-  if (state.isFlUnder10) extras.push('FL10以内');
+  if (state.isSecondOrder) extras.push('初回注文(2匹目)');
   if (extras.length) lines.push(extras.join(' / '));
 
   return lines.join('\n');
@@ -143,7 +143,7 @@ export async function buildScoreCanvas(state, result) {
 
   const tags = [];
   if (state.isShiny) tags.push({ text: '★ 色違い (+350)', gold: true });
-  if (state.isFlUnder10) tags.push({ text: 'FL10以内 (+100)' });
+  if (state.isSecondOrder) tags.push({ text: '初回注文(2匹目) (+100)' });
 
   // タグは幅が尽きたら次の行へ送る（打ち切ると付いているボーナスが消えてしまう）
   probe.font = `bold 23px ${FONT}`;

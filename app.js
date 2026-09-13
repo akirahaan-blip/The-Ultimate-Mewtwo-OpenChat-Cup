@@ -9,10 +9,10 @@ import {
   NATURE_SCORES,
   NATURES,
   calculateTotalScore
-} from './scoring.js?v=18';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=18';
-import { analyzeScreenshot } from './ocr.js?v=18';
-import { buildPostText, copyPostText, downloadScoreImage } from './share.js?v=18';
+} from './scoring.js?v=19';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=19';
+import { analyzeScreenshot } from './ocr.js?v=19';
+import { buildPostText, copyPostText, downloadScoreImage } from './share.js?v=19';
 
 // 現在の状態
 let state = {
@@ -23,7 +23,7 @@ let state = {
   ingredientPattern: "AAA",
   natureName: "",
   subSkills: [null, null, null, null, null],
-  isFlUnder10: false
+  isSecondOrder: false
 };
 
 const STORAGE_KEY = "mewtwo_openchat_cup_history_v1";
@@ -47,7 +47,7 @@ const ingSlot30 = document.getElementById("ingSlot30");
 const ingSlot60 = document.getElementById("ingSlot60");
 const natureSelect = document.getElementById("natureSelect");
 const shinyCheck = document.getElementById("shinyCheck");
-const flCheck = document.getElementById("flCheck");
+const secondOrderCheck = document.getElementById("secondOrderCheck");
 const subSkillContainer = document.getElementById("subSkillContainer");
 const historyListEl = document.getElementById("historyList");
 const saveHistoryBtn = document.getElementById("saveHistoryBtn");
@@ -170,8 +170,8 @@ function bindEvents() {
     recalculateAndRender();
   });
 
-  flCheck.addEventListener("change", (e) => {
-    state.isFlUnder10 = e.target.checked;
+  secondOrderCheck.addEventListener("change", (e) => {
+    state.isSecondOrder = e.target.checked;
     recalculateAndRender();
   });
 
@@ -229,7 +229,7 @@ function resetState() {
     ingredientPattern: "AAA",
     natureName: "",
     subSkills: [null, null, null, null, null],
-    isFlUnder10: false
+    isSecondOrder: false
   };
 }
 
@@ -255,12 +255,12 @@ async function handleImageUpload(file) {
             progressLabel.textContent = `解析中... ${pct}%`;
           });
 
-          // 色違い・FL10以内はスクショに写らないのでOCRでは判定できない。
+          // 色違い・初回注文(2匹目)はスクショに写らないのでOCRでは判定できない。
           // 解析のたびに resetState() で消してしまうと、先に入れてもらった
           // チェックが外れてしまうため、ここだけ引き継ぐ。
           const manualBonus = {
             isShiny: state.isShiny,
-            isFlUnder10: state.isFlUnder10
+            isSecondOrder: state.isSecondOrder
           };
           resetState();
           Object.assign(state, manualBonus);
@@ -396,7 +396,7 @@ function updateUIFromState() {
 
   natureSelect.value = state.natureName || "";
   shinyCheck.checked = state.isShiny;
-  flCheck.checked = state.isFlUnder10;
+  secondOrderCheck.checked = state.isSecondOrder;
 
   subSkillContainer.querySelectorAll(".skill-select").forEach(sel => {
     const slot = parseInt(sel.dataset.slot, 10);
@@ -439,7 +439,7 @@ function recalculateAndRender() {
 
   const bonuses = [];
   if (state.isShiny) bonuses.push({ name: "色違い (+350)", gold: true });
-  if (state.isFlUnder10) bonuses.push({ name: "FL10以内 (+100)", gold: false });
+  if (state.isSecondOrder) bonuses.push({ name: "初回注文(2匹目) (+100)", gold: false });
 
   bonusTagsEl.innerHTML = bonuses.map(b => `
     <span class="bonus-tag ${b.gold ? 'gold' : ''}">${b.name}</span>
