@@ -9,10 +9,10 @@ import {
   NATURE_SCORES,
   NATURES,
   calculateTotalScore
-} from './scoring.js?v=23';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=23';
-import { analyzeScreenshot } from './ocr.js?v=23';
-import { buildPostText, copyPostText, downloadScoreImage } from './share.js?v=23';
+} from './scoring.js?v=24';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=24';
+import { analyzeScreenshot } from './ocr.js?v=24';
+import { buildPostText, copyPostText, downloadScoreImage, buildScoreBlob, isTouchDevice } from './share.js?v=24';
 
 // 現在の状態
 let state = {
@@ -190,14 +190,26 @@ function bindEvents() {
     shareImgBtn.disabled = true;
     shareImgBtn.textContent = "🖼️ 作成中...";
     try {
-      await downloadScoreImage(state, calculateTotalScore(state));
-      shareImgBtn.textContent = "✓ 保存しました";
+      if (isTouchDevice()) {
+        // スマホ：画像を画面に出して、長押し or 共有ボタンで保存してもらう
+        const { blob, filename } = await buildScoreBlob(state, calculateTotalScore(state));
+        showImageOverlay(blob, filename);
+        shareImgBtn.textContent = label;
+      } else {
+        await downloadScoreImage(state, calculateTotalScore(state));
+        shareImgBtn.textContent = "✓ 保存しました";
+      }
     } catch (err) {
       console.error(err);
       shareImgBtn.textContent = "※ 保存に失敗";
     }
     setTimeout(() => { shareImgBtn.textContent = label; shareImgBtn.disabled = false; }, 1800);
   });
+
+  // 画像オーバーレイの「閉じる」（幕の外側をタップしても閉じる）
+  const imgOverlay = document.getElementById("imgOverlay");
+  document.getElementById("imgOverlayClose").addEventListener("click", hideImageOverlay);
+  imgOverlay.addEventListener("click", (e) => { if (e.target === imgOverlay) hideImageOverlay(); });
 
   shareTxtBtn.addEventListener("click", async () => {
     const label = shareTxtBtn.textContent;
@@ -231,6 +243,42 @@ function resetState() {
     subSkills: [null, null, null, null, null],
     isSecondOrder: false
   };
+}
+
+/**
+ * 結果カードの画像を画面に出す（スマホ用）
+ * 共有ボタンは、端末がファイル共有に対応している時だけ出す
+ * （iPhoneなら共有シートに「画像を保存」が出る）
+ */
+let overlayUrl = null;
+function showImageOverlay(blob, filename) {
+  const overlay = document.getElementById("imgOverlay");
+  const pic = document.getElementById("imgOverlayPic");
+  const shareBtn = document.getElementById("imgOverlayShare");
+
+  if (overlayUrl) URL.revokeObjectURL(overlayUrl);
+  overlayUrl = URL.createObjectURL(blob);
+  pic.src = overlayUrl;
+
+  const file = new File([blob], filename, { type: "image/png" });
+  const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  shareBtn.hidden = !canShare;
+  shareBtn.onclick = async () => {
+    try {
+      await navigator.share({ files: [file], title: "最強ミュウツーオプチャ杯" });
+    } catch (err) {
+      // 共有シートを閉じただけでもここに来るので、エラー表示はしない
+      console.log("share cancelled", err);
+    }
+  };
+
+  overlay.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function hideImageOverlay() {
+  document.getElementById("imgOverlay").hidden = true;
+  document.body.style.overflow = "";
 }
 
 /**

@@ -9,8 +9,8 @@
  * 画面表示とは別に余白や文字サイズを詰めた方が読みやすいため、
  * 同じ内容を Canvas に描き直している。
  */
-import { SUB_SKILLS, INGREDIENTS, INGREDIENT_SCORES, NATURES, NATURE_SCORES } from './scoring.js?v=23';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=23';
+import { SUB_SKILLS, INGREDIENTS, INGREDIENT_SCORES, NATURES, NATURE_SCORES } from './scoring.js?v=24';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=24';
 
 export const HASHTAG = '#最強ミュウツーオプチャ杯';
 
@@ -314,21 +314,34 @@ export async function buildScoreCanvas(state, result) {
   return canvas;
 }
 
-/** 結果カードのPNGを保存させる */
-export async function downloadScoreImage(state, result) {
+/** 結果カードのPNG（Blob）を作る */
+export async function buildScoreBlob(state, result) {
   const canvas = await buildScoreCanvas(state, result);
-  return new Promise(resolve => {
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `mewtwo_${state.pokemonName}_${result.totalScore}pt.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      // click直後に破棄するとダウンロードが始まらない環境があるので少し待つ
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      resolve(canvas);
-    }, 'image/png');
-  });
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  const filename = `mewtwo_${state.pokemonName}_${result.totalScore}pt.png`;
+  return { blob, filename, canvas };
+}
+
+/** スマホかどうか（マウスが無く、指で触る端末） */
+export function isTouchDevice() {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+/**
+ * 結果カードのPNGを保存させる（パソコン用）。
+ * <a download> でファイルをダウンロードさせる。スマホのブラウザはこの方式を
+ * 無視することが多いので、スマホでは app.js 側で画像を画面に出す方式にしている。
+ */
+export async function downloadScoreImage(state, result) {
+  const { blob, filename, canvas } = await buildScoreBlob(state, result);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // click直後に破棄するとダウンロードが始まらない環境があるので少し待つ
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return canvas;
 }

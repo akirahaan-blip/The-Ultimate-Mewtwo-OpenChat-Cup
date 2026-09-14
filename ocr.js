@@ -6,9 +6,9 @@
  *   ・食材名 → A / B / C のコード
  *   ・Lv.1 の食材は必ず1種類目、という前提の適用
  */
-import { getIngredientPattern } from './scoring.js?v=23';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=23';
-import { readStatusScreen, initOCR } from './vendor/pokesleep-vision/index.js?v=23';
+import { getIngredientPattern } from './scoring.js?v=24';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=24';
+import { readStatusScreen, initOCR } from './vendor/pokesleep-vision/index.js?v=24';
 
 export { initOCR };
 
