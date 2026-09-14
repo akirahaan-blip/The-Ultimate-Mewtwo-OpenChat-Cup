@@ -6,9 +6,9 @@
  *   ・食材名 → A / B / C のコード
  *   ・Lv.1 の食材は必ず1種類目、という前提の適用
  */
-import { getIngredientPattern } from './scoring.js?v=19';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=19';
-import { readStatusScreen, initOCR } from './vendor/pokesleep-vision/index.js?v=19';
+import { getIngredientPattern } from './scoring.js?v=23';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=23';
+import { readStatusScreen, initOCR } from './vendor/pokesleep-vision/index.js?v=23';
 
 export { initOCR };
 
@@ -29,6 +29,8 @@ export async function analyzeScreenshot(imageElement, onProgress, options = {}) 
     onProgress,
     onCrop: options.onCrop,
     pokemonNames: POKEMON_NAMES,
+    // 大会の食材3つだけを候補にする（トマトなど関係ない食材に当たらないように）
+    ingredientNames: INGREDIENT_LIST.map(ing => ing.name),
     verbose: true
   });
 

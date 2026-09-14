@@ -4,7 +4,7 @@
  * サブスキル17種・性格25種という「閉じた候補集合」が相手なので、
  * 多少読み違えていても正解に寄せられる。
  */
-import { SUB_SKILLS, NATURES } from './gamedata.js?v=8';
+import { SUB_SKILLS, NATURES } from './gamedata.js?v=12';
 
 // 半角化・長音記号の統一・小書き仮名の統一・漢字とカタカナのそっくりさん対策。
 // OCR結果と候補名の両方に同じ処理をかけてから比較すること。
@@ -124,11 +124,22 @@ export function extractSP(text) {
   const tagged = normalizeText(text).match(/SP(\d{2,5})/);
   if (tagged) return { value: parseInt(tagged[1], 10), sure: true };
 
+  // ゲームは1000以上のSPを「1,603」のように3桁区切りで表示する。
+  // 区切りは「,」のほか、OCRが「.」と読むこともある。
+  // この形は時刻（15:04）やレベル（Lv.28）とは混ざらないので、そのまま採用してよい。
+  // 直前にゴミの数字が付いていても（例「21.634」）、区切りの直前1桁だけを使う。
+  const grouped = text.match(/(\d)[.,](\d{3})(?!\d)/);
+  if (grouped) return { value: parseInt(grouped[1] + grouped[2], 10), sure: true };
+
   // ヘッダーには本人のレベルと食材解放レベルも写っている。
   // 「Lv.30」が「Lv.306」のようにくっついて読まれると3桁の数字として
   // SPの候補に混ざってしまうので、レベル表記ごと先に取り除く。
   const withoutLevels = text.replace(/Lv\.?\s*\d+/gi, ' ');
-  const numbers = [...new Set((withoutLevels.match(/\d{3,4}/g) || []).map(n => parseInt(n, 10)))];
+  // 5桁以上つながった数字は、別の数字（食材の×2バッジなど）とくっついて読まれたもの。
+  // 先頭4桁を切り出すと間違った値になるので、候補から外す。
+  const numbers = [...new Set((withoutLevels.match(/\d+/g) || [])
+    .filter(n => n.length >= 3 && n.length <= 4)
+    .map(n => parseInt(n, 10)))];
   // 残りが1つに絞れた時だけ採用する。複数あるなら時計やバッテリー残量と区別できない
   return numbers.length === 1 ? { value: numbers[0], sure: false } : null;
 }

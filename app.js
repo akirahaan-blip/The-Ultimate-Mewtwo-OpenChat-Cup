@@ -9,10 +9,10 @@ import {
   NATURE_SCORES,
   NATURES,
   calculateTotalScore
-} from './scoring.js?v=19';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=19';
-import { analyzeScreenshot } from './ocr.js?v=19';
-import { buildPostText, copyPostText, downloadScoreImage } from './share.js?v=19';
+} from './scoring.js?v=23';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=23';
+import { analyzeScreenshot } from './ocr.js?v=23';
+import { buildPostText, copyPostText, downloadScoreImage } from './share.js?v=23';
 
 // 現在の状態
 let state = {
@@ -327,7 +327,7 @@ function renderOcrSummary(detected) {
   rows.push({
     label: "食材",
     ok: ing[1] && ing[2],
-    text: ["トマト", ...ing.slice(1).map(c => (c ? INGREDIENTS[c].short : "？"))].join(" / ")
+    text: [INGREDIENTS["A"].short, ...ing.slice(1).map(c => (c ? INGREDIENTS[c].short : "？"))].join(" / ")
   });
   SLOT_LEVELS.forEach((lv, i) => {
     const skill = SUB_SKILLS.find(s => s.id === detected.subSkills[i]);

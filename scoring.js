@@ -5,8 +5,8 @@
  * vendor/pokesleep-vision のマスタデータを使う。
  * ここに持つのは大会の配点だけにして、名前を二重管理しないようにしている。
  */
-import { SUB_SKILLS as SUB_SKILL_MASTER, NATURES as NATURE_MASTER } from './vendor/pokesleep-vision/gamedata.js?v=19';
-import { INGREDIENT_BY_CODE } from './ingredients-setting.js?v=19';
+import { SUB_SKILLS as SUB_SKILL_MASTER, NATURES as NATURE_MASTER } from './vendor/pokesleep-vision/gamedata.js?v=23';
+import { INGREDIENT_BY_CODE } from './ingredients-setting.js?v=23';
 
 // サブスキルの大会配点（2026-09-13 ミュウツー配点表）。
 // isGold は「オール金スキルボーナス」、isBlue は「地球は青かった」の対象かどうか
@@ -54,7 +54,7 @@ const INGREDIENT_PATTERN_POINTS = {
   "ABA": -30
 };
 
-// 画面に出す見出し（例: "ABA (トマト/カカオ/トマト)"）は、上の配点と
+// 画面に出す見出し（例: "ABA (大豆/コーン/大豆)"）は、上の配点と
 // 食材設定から自動で組み立てる。食材名を手で書き写さないようにするため。
 export const INGREDIENT_SCORES = {
   ...Object.fromEntries(

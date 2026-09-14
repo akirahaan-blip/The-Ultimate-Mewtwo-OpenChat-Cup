@@ -22,7 +22,7 @@
 ## 🖼️ 画像について
 - `mewtwo.png` … ヘッダー中央と結果カードのアイコン。月をバックにしたミュウツーの1枚絵（元ファイルは `Claude/mewtwo/mew2.png`、512pxに縮小）。切り抜き画像ではないので CSS で角を丸めている。
 - `mew.png` … ヘッダー左右のミュウ。600点以上で現れて交互に点滅する。左側は CSS の `scaleX(-1)` で左右反転。
-- `icon_tomato.png` / `icon_cacao.png` / `icon_potato.png` … 食材アイコン
+- `icon_soy.png` / `icon_corn.png` / `icon_potato.png` … 食材アイコン（大豆とコーンは2026-09-14に絵文字を描いて作ったもの。ポテトだけゲーム画面の切り抜き。`icon_tomato.png` / `icon_cacao.png` は使っていないが残してある）
 
 ### mew.png の加工について
 2026-09-13 に、濃いピンクの線で描かれた新しい絵（元ファイルは `Claude/mewtwo/mew.jpg`、白背景のJPEG）に差し替えた。
@@ -42,9 +42,28 @@ JPEGは背景を透明にできないので、Pillow で以下を施した PNG �
 
 プログラミングに慣れていない人向けの詳しい手順は **`食材の変えかた.txt`** に書いてある。
 
-⚠️ 食材を変えると、スクショからの**食材の自動読み取りだけ**が当たらなくなる
-（`vendor/pokesleep-vision/ingredients.js` の PROTOTYPES に色相の実測値が必要なため）。
-SP・性格・サブスキルの読み取りには影響しない。食材は手動で選んでもらう運用になる。
+2026-09-14 に本番の食材（ワカクサ大豆 / ワカクサコーン / ほっこりポテト）に差し替えずみ。
+
+スクショからの食材の自動読み取りは、**大豆・コーン・ポテトの3つに対応ずみ**（2026-09-14）。
+テスト用スクショ `Claude/mewtwo/mew2test1〜5.jpg` の5枚すべてで、食材・サブスキル・せいかく・SPが正しく読めることを確認してある。
+
+### 食材の色を測る（別の食材に変えたとき）
+食材を別のものに変えると、その食材の色データが無いので自動読み取りが当たらなくなる。
+色データは `vendor/pokesleep-vision/ingredients.js` の `PROTOTYPES` にある。足すときは：
+
+1. `サイトを開く.bat` でサイトを開き、F12 でコンソールを出す
+2. その食材が写っているステータス画面のスクショを、サイトと同じフォルダに置く
+3. コンソールで次を実行すると、スロットごとの `hue`（24個の数字）が出る
+   ```js
+   const V = await import('./vendor/pokesleep-vision/index.js');
+   const img = new Image(); img.src = 'スクショ.jpg'; await img.decode();
+   const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+   c.getContext('2d').drawImage(img, 0, 0);
+   const px = { w: c.width, h: c.height, data: c.getContext('2d').getImageData(0, 0, c.width, c.height).data };
+   V.detectLayout(c).ingredientSlots.map(b => V.describeIcon(px, b).hue.map(v => +v.toFixed(3)));
+   ```
+4. 出てきた数字を `PROTOTYPES` に `{ name: '食材名', hue: [...] }` として足す（何枚かの平均にするとよい）
+5. `ocr.js` は `ingredients-setting.js` の name をそのまま候補に渡すので、name をぴったり合わせること
 
 ## 🚀 公開URL (GitHub Pages)
 https://akirahaan-blip.github.io/The-Ultimate-Mewtwo-OpenChat-Cup/

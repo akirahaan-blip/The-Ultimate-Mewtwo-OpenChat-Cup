@@ -275,24 +275,36 @@ export function detectLayout(canvas) {
 
   notes.push(`緑バー ${bars.length}本 / 緑ピル ${pills.length}個`);
 
-  const skillBar = bars[0] || null;      // 「メインスキル・サブスキル」
-  const detailBar = bars[1] || null;     // 「詳細ステータス」
+  // 画像のいちばん上に、前の見出し（「おてつだい能力」など）の下端だけが
+  // 写り込むことがある。上端に接している細い帯は見出しバーとして数えない。
+  // 本物の見出しバーは幅の約5.5%の高さがある。
+  const minBarH = w * 0.03;
+  const realBars = bars.filter(b => b.y0 > 1 && (b.y1 - b.y0) >= minBarH);
+  if (realBars.length !== bars.length) notes.push(`上端に接した／細い緑帯を${bars.length - realBars.length}本除外`);
+
+  const skillBar = realBars[0] || null;      // 「メインスキル・サブスキル」
+  const detailBar = realBars[1] || null;     // 「詳細ステータス」
 
   // ---- 食材の行 -----------------------------------------------------------
   // 見出しバーより上のラベルピルは、上から きのみ / 食材 / おてつだい時間 / 最大所持数。
-  // バーを基準に下から数えて3番目が「食材」。
+  // ただし「きのみ」「食材」のピルは、ポケモンをタップした時のポップアップに
+  // 隠れて見えない（または一部しか見えない）ことが多い。
+  // そこで、必ず見えている下の2つ（おてつだい時間・最大所持数）を基準にする。
+  // 2つの間隔を1ピッチとして、その 1.75〜0.3 ピッチ上に食材アイコンの行がある。
   let ingredientSlots = [];
   const abovePills = pills.filter(p => !skillBar || p.y1 <= skillBar.y0);
-  if (abovePills.length >= 3) {
-    const idx = abovePills.length - 3;
-    const target = abovePills[idx];
-    const prev = abovePills[idx - 1];
-    const next = abovePills[idx + 1];
-    const pillH = target.y1 - target.y0;
-    const rowTop = prev ? (prev.y1 + target.y0) / 2 : target.y0 - pillH * 2;
-    const rowBottom = next ? (target.y1 + next.y0) / 2 : target.y1 + pillH * 2;
-    ingredientSlots = findIngredientSlots(px, { y0: rowTop, y1: rowBottom });
-    notes.push(`食材行 y=${Math.round(rowTop)}..${Math.round(rowBottom)} スロット${ingredientSlots.length}個`);
+  if (abovePills.length >= 2) {
+    const timePill = abovePills[abovePills.length - 2];  // おてつだい時間
+    const bagPill = abovePills[abovePills.length - 1];   // 最大所持数
+    const pitch = bagPill.y0 - timePill.y0;
+    if (pitch > w * 0.08 && pitch < w * 0.18) {
+      const rowTop = Math.max(0, timePill.y0 - pitch * 1.75);
+      const rowBottom = timePill.y0 - pitch * 0.3;
+      ingredientSlots = findIngredientSlots(px, { y0: rowTop, y1: rowBottom });
+      notes.push(`食材行 y=${Math.round(rowTop)}..${Math.round(rowBottom)} スロット${ingredientSlots.length}個`);
+    } else {
+      notes.push(`食材行を特定できず（ラベルピルの間隔 ${Math.round(pitch)}px が想定外）`);
+    }
   } else {
     notes.push('食材行を特定できず（緑のラベルピルが足りない）');
   }
@@ -372,7 +384,10 @@ export function detectLayout(canvas) {
 
   // ---- 名前とSP ------------------------------------------------------------
   // 画面上部。ポケモンをタップした時のポップアップが被っていることもあるので広めに取る。
-  const headerBox = { x0: w * 0.02, x1: w * 0.78, y0: h * 0.03, y1: Math.min(h, h * 0.17) };
+  // ただし下に行きすぎると食材の「×1」「×2」バッジの数字を拾って、
+  // SPと連結して読まれてしまう（実例: 1603 が 21603 に）。
+  // ポップアップの下端は幅の約0.29倍、バッジの上端は約0.33倍の位置なので、幅の0.31倍で止める。
+  const headerBox = { x0: w * 0.02, x1: w * 0.78, y0: h * 0.03, y1: Math.min(h, h * 0.17, w * 0.31) };
 
   return { w, h, headerBox, ingredientSlots, subSkillBoxes, natureBox, notes, bars, pills };
 }

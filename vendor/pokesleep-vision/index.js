@@ -9,15 +9,15 @@
  * 返すのは「ゲーム側の事実」だけ。
  * 大会のコード（A/B/C）や配点への変換は、使う側のアプリで行うこと。
  */
-import { SUB_SKILLS, NATURES, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=8';
-import { detectLayout, readPixels } from './layout.js?v=8';
-import { classifyIngredientSlot } from './ingredients.js?v=8';
-import { matchSubSkill, matchNature, extractSP, normalizeText } from './matching.js?v=8';
+import { SUB_SKILLS, NATURES, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=12';
+import { detectLayout, readPixels } from './layout.js?v=12';
+import { classifyIngredientSlot } from './ingredients.js?v=12';
+import { matchSubSkill, matchNature, extractSP, normalizeText } from './matching.js?v=12';
 
-export { SUB_SKILLS, NATURES, STATS, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=8';
-export { detectLayout } from './layout.js?v=8';
-export { PROTOTYPES, describeIcon, classifyIngredientSlot } from './ingredients.js?v=8';
-export { normalizeText, similarity, matchSubSkill, matchNature, extractSP } from './matching.js?v=8';
+export { SUB_SKILLS, NATURES, STATS, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=12';
+export { detectLayout } from './layout.js?v=12';
+export { PROTOTYPES, describeIcon, classifyIngredientSlot } from './ingredients.js?v=12';
+export { normalizeText, similarity, matchSubSkill, matchNature, extractSP } from './matching.js?v=12';
 
 let worker = null;
 
@@ -121,11 +121,12 @@ async function recognize(w, canvas, { whitelist, singleLine = true, psm }) {
  * @param {(pct:number)=>void} [options.onProgress]
  * @param {(name:string, canvas:HTMLCanvasElement)=>void} [options.onCrop] 切り出した画像を受け取る（デバッグ用）
  * @param {string[]} [options.pokemonNames] 名前の候補。渡すとヘッダーのOCRをその文字だけに絞る
+ * @param {string[]} [options.ingredientNames] 食材の候補名。渡すと PROTOTYPES のうちその食材だけで判定する
  * @param {boolean} [options.verbose] 経過をconsoleに出す
  * @param {object} [options.tesseract] Tesseract.js（既定は globalThis.Tesseract）
  */
 export async function readStatusScreen(image, options = {}) {
-  const { onProgress, onCrop, pokemonNames = [], verbose = false, tesseract } = options;
+  const { onProgress, onCrop, pokemonNames = [], ingredientNames = null, verbose = false, tesseract } = options;
   const log = verbose ? (...a) => console.log(...a) : () => {};
 
   const base = makeCanvas(
@@ -150,7 +151,7 @@ export async function readStatusScreen(image, options = {}) {
 
   // ---- 食材（OCR不要） ---------------------------------------------------
   layout.ingredientSlots.slice(0, 3).forEach((box, i) => {
-    const res = classifyIngredientSlot(px, box);
+    const res = classifyIngredientSlot(px, box, ingredientNames);
     result.ingredients[i].name = res.name;
     result.ingredients[i].confidence = res.confidence;
     log(`[食材] Lv.${INGREDIENT_LEVELS[i]}: ${res.name || '判定不可'} (信頼度 ${res.confidence.toFixed(2)})`);
@@ -170,7 +171,8 @@ export async function readStatusScreen(image, options = {}) {
     // 小さいスクショだけ引き伸ばす程度にとどめる。
     const canvas = cropForOCR(base, box, 300);
     if (onCrop) onCrop('header', canvas);
-    const chars = pokemonNames.length ? charsetOf(pokemonNames, 'SPLv0123456789.') : '';
+    // 「,」はSPの3桁区切り（1,603）を残すため
+    const chars = pokemonNames.length ? charsetOf(pokemonNames, 'SPLv0123456789.,') : '';
 
     // 長い名前から先に見る（「カヌチャン」が「デカヌチャン」に先に当たらないように）
     const byLength = [...pokemonNames].sort((a, b) => b.length - a.length);

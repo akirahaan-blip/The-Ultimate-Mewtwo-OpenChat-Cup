@@ -16,8 +16,8 @@
  * image … 食材アイコンの画像ファイル名。このフォルダに入れた画像の名前を書きます。
  */
 export const INGREDIENT_LIST = [
-  { code: "A", name: "あんみんトマト",   short: "トマト",     emoji: "🍅", image: "icon_tomato.png" },
-  { code: "B", name: "リラックスカカオ", short: "カカオ",     emoji: "🍫", image: "icon_cacao.png" },
+  { code: "A", name: "ワカクサ大豆",     short: "大豆",       emoji: "🫘", image: "icon_soy.png" },
+  { code: "B", name: "ワカクサコーン",   short: "コーン",     emoji: "🌽", image: "icon_corn.png" },
   { code: "C", name: "ほっこりポテト",   short: "じゃがいも", emoji: "🥔", image: "icon_potato.png" }
 ];
 
