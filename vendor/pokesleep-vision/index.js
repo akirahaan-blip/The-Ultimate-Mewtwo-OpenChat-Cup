@@ -9,15 +9,15 @@
  * 返すのは「ゲーム側の事実」だけ。
  * 大会のコード（A/B/C）や配点への変換は、使う側のアプリで行うこと。
  */
-import { SUB_SKILLS, NATURES, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=12';
-import { detectLayout, readPixels } from './layout.js?v=12';
-import { classifyIngredientSlot } from './ingredients.js?v=12';
-import { matchSubSkill, matchNature, extractSP, normalizeText } from './matching.js?v=12';
+import { SUB_SKILLS, NATURES, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=17';
+import { detectLayout, readPixels } from './layout.js?v=17';
+import { classifyIngredientSlot } from './ingredients.js?v=17';
+import { matchSubSkill, matchNature, extractSP, normalizeText } from './matching.js?v=17';
 
-export { SUB_SKILLS, NATURES, STATS, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=12';
-export { detectLayout } from './layout.js?v=12';
-export { PROTOTYPES, describeIcon, classifyIngredientSlot } from './ingredients.js?v=12';
-export { normalizeText, similarity, matchSubSkill, matchNature, extractSP } from './matching.js?v=12';
+export { SUB_SKILLS, NATURES, STATS, SUB_SKILL_LEVELS, INGREDIENT_LEVELS } from './gamedata.js?v=17';
+export { detectLayout } from './layout.js?v=17';
+export { PROTOTYPES, describeIcon, classifyIngredientSlot } from './ingredients.js?v=17';
+export { normalizeText, similarity, matchSubSkill, matchNature, extractSP } from './matching.js?v=17';
 
 let worker = null;
 
@@ -151,6 +151,7 @@ export async function readStatusScreen(image, options = {}) {
 
   // ---- 食材（OCR不要） ---------------------------------------------------
   layout.ingredientSlots.slice(0, 3).forEach((box, i) => {
+    if (!box) { log(`[食材] Lv.${INGREDIENT_LEVELS[i]}: アイコンが見つからず（ポップアップに隠れている等）`); return; }
     const res = classifyIngredientSlot(px, box, ingredientNames);
     result.ingredients[i].name = res.name;
     result.ingredients[i].confidence = res.confidence;

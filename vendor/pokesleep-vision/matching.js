@@ -4,7 +4,7 @@
  * サブスキル17種・性格25種という「閉じた候補集合」が相手なので、
  * 多少読み違えていても正解に寄せられる。
  */
-import { SUB_SKILLS, NATURES } from './gamedata.js?v=12';
+import { SUB_SKILLS, NATURES } from './gamedata.js?v=17';
 
 // 半角化・長音記号の統一・小書き仮名の統一・漢字とカタカナのそっくりさん対策。
 // OCR結果と候補名の両方に同じ処理をかけてから比較すること。
@@ -136,10 +136,18 @@ export function extractSP(text) {
   // SPの候補に混ざってしまうので、レベル表記ごと先に取り除く。
   const withoutLevels = text.replace(/Lv\.?\s*\d+/gi, ' ');
   // 5桁以上つながった数字は、別の数字（食材の×2バッジなど）とくっついて読まれたもの。
-  // 先頭4桁を切り出すと間違った値になるので、候補から外す。
-  const numbers = [...new Set((withoutLevels.match(/\d+/g) || [])
-    .filter(n => n.length >= 3 && n.length <= 4)
-    .map(n => parseInt(n, 10)))];
+  // 先頭4桁を切り出すと間違った値になるので、まずは候補から外す。
+  const runs = withoutLevels.match(/\d+/g) || [];
+  const numbers = [...new Set(runs.filter(n => n.length >= 3 && n.length <= 4).map(n => parseInt(n, 10)))];
   // 残りが1つに絞れた時だけ採用する。複数あるなら時計やバッテリー残量と区別できない
-  return numbers.length === 1 ? { value: numbers[0], sure: false } : null;
+  if (numbers.length === 1) return { value: numbers[0], sure: false };
+
+  // 3〜4桁の数字が無い時の保険。SPの左にある赤い「SP」バッジが「1」「2」と誤読されて
+  // 数字の頭にくっつくことがある（実例: 1644 が 11644、1603 が 21603）。
+  // くっつくのは必ず左側なので、5桁の数字は下4桁をSPとみなす（要確認あつかい）。
+  if (numbers.length === 0) {
+    const tails = [...new Set(runs.filter(n => n.length === 5).map(n => parseInt(n.slice(1), 10)))];
+    if (tails.length === 1) return { value: tails[0], sure: false };
+  }
+  return null;
 }

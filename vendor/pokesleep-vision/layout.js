@@ -251,15 +251,25 @@ function findIngredientSlots(px, band) {
   }
 
   const peak = Math.max(...colScore);
-  if (peak <= 0) return [];
-  const cols = toBands(colScore, peak * 0.25, Math.round(w * 0.02), Math.round(w * 0.012));
-  return cols
+  if (peak <= 0) return [null, null, null];
+  const cols = toBands(colScore, peak * 0.25, Math.round(w * 0.02), Math.round(w * 0.012))
     .map(c => ({ x0: c.start, x1: c.end + 1, width: c.end - c.start }))
-    .filter(c => c.width >= w * 0.05)   // ×2 バッジの縁など小さすぎる塊は捨てる
-    .sort((a, b) => b.width - a.width)
-    .slice(0, 3)
-    .sort((a, b) => a.x0 - b.x0)
-    .map(s => ({ x0: s.x0, x1: s.x1, y0, y1 }));
+    .filter(c => c.width >= w * 0.05);   // ×2 バッジの縁など小さすぎる塊は捨てる
+
+  // 見つかった列を「左から順に Lv.1 / Lv.30 / Lv.60」と決めつけない。
+  // Lv.1 のアイコンはポップアップに隠れて見つからないことがあり、
+  // その時に Lv.30 のアイコンを Lv.1 と取り違えてしまうため。
+  // 3スロットの中心は幅の約 0.50 / 0.66 / 0.82 の位置なので、いちばん近い枠に割り当てる。
+  const centers = [0.50, 0.66, 0.82].map(r => r * w);
+  const slots = [null, null, null];
+  for (const c of cols) {
+    const cx = (c.x0 + c.x1) / 2;
+    let best = 0;
+    for (let i = 1; i < 3; i++) if (Math.abs(cx - centers[i]) < Math.abs(cx - centers[best])) best = i;
+    if (Math.abs(cx - centers[best]) > w * 0.08) continue;   // どの枠からも遠いものは無視
+    if (!slots[best] || c.width > slots[best].width) slots[best] = c;
+  }
+  return slots.map(s => s ? { x0: s.x0, x1: s.x1, y0, y1 } : null);
 }
 
 // ---------------------------------------------------------------- 本体
@@ -291,7 +301,7 @@ export function detectLayout(canvas) {
   // 隠れて見えない（または一部しか見えない）ことが多い。
   // そこで、必ず見えている下の2つ（おてつだい時間・最大所持数）を基準にする。
   // 2つの間隔を1ピッチとして、その 1.75〜0.3 ピッチ上に食材アイコンの行がある。
-  let ingredientSlots = [];
+  let ingredientSlots = [null, null, null];
   const abovePills = pills.filter(p => !skillBar || p.y1 <= skillBar.y0);
   if (abovePills.length >= 2) {
     const timePill = abovePills[abovePills.length - 2];  // おてつだい時間
@@ -301,7 +311,7 @@ export function detectLayout(canvas) {
       const rowTop = Math.max(0, timePill.y0 - pitch * 1.75);
       const rowBottom = timePill.y0 - pitch * 0.3;
       ingredientSlots = findIngredientSlots(px, { y0: rowTop, y1: rowBottom });
-      notes.push(`食材行 y=${Math.round(rowTop)}..${Math.round(rowBottom)} スロット${ingredientSlots.length}個`);
+      notes.push(`食材行 y=${Math.round(rowTop)}..${Math.round(rowBottom)} スロット${ingredientSlots.filter(Boolean).length}個 (${ingredientSlots.map(s => s ? 'o' : 'x').join('')})`);
     } else {
       notes.push(`食材行を特定できず（ラベルピルの間隔 ${Math.round(pitch)}px が想定外）`);
     }
@@ -316,19 +326,29 @@ export function detectLayout(canvas) {
     const secBottom = detailBar ? detailBar.y0 : h;
     const step = Math.max(1, Math.round(w / 320));
     const xs = Math.round(w * 0.03), xe = Math.round(w * 0.97);
+    // 「文字がある行」の検出は左の列（幅の49.5%まで）だけで行う。
+    // 右端にはゲームの「チャット」などの丸いボタンが浮いていることがあり、
+    // 行と行のすき間を埋めて1つの行に見せてしまうため。
+    // 左の列には3行とも必ずピルがある（Lv.10 / Lv.50 / Lv.80）。
+    // ただしメインスキルカードの「オレンジの枠」は全幅で数える。
+    // 左の列だけだとカードの枠線が薄く見えて、カードの本文を行と間違えるため。
+    const xeInk = Math.round(w * 0.495);
 
     const inkRows = new Float32Array(secBottom - secTop);
     const orangeRows = new Float32Array(secBottom - secTop);
     for (let y = secTop; y < secBottom; y++) {
-      let ink = 0, orange = 0, n = 0;
+      let ink = 0, orange = 0, n = 0, nInk = 0;
       for (let x = xs; x < xe; x += step) {
         const i = (y * w + x) * 4;
         const r = px.data[i], g = px.data[i + 1], b = px.data[i + 2];
         n++;
-        if (!isPaper(r, g, b)) ink++;
         if (isCardOrange(r, g, b)) orange++;
+        if (x < xeInk) {
+          nInk++;
+          if (!isPaper(r, g, b)) ink++;
+        }
       }
-      inkRows[y - secTop] = n ? ink / n : 0;
+      inkRows[y - secTop] = nInk ? ink / nInk : 0;
       orangeRows[y - secTop] = n ? orange / n : 0;
     }
 
@@ -387,7 +407,12 @@ export function detectLayout(canvas) {
   // ただし下に行きすぎると食材の「×1」「×2」バッジの数字を拾って、
   // SPと連結して読まれてしまう（実例: 1603 が 21603 に）。
   // ポップアップの下端は幅の約0.29倍、バッジの上端は約0.33倍の位置なので、幅の0.31倍で止める。
-  const headerBox = { x0: w * 0.02, x1: w * 0.78, y0: h * 0.03, y1: Math.min(h, h * 0.17, w * 0.31) };
+  // 横は幅の58%まで。ポップアップの右端が幅の約57%で、その右には食材アイコンが
+  // 並んでいる。スクロール位置によってはアイコンが同じ高さに来て、OCRの邪魔をする。
+  // 上は幅の11%から。その上はOSのステータスバー（時刻「15:19」など）で、
+  // 数字として読まれるとSPの候補と混ざって決められなくなる。
+  // ポップアップは幅の約13%から始まり、SPの数字は約17〜21%の高さにあるので切れない。
+  const headerBox = { x0: w * 0.02, x1: w * 0.58, y0: Math.max(h * 0.03, w * 0.11), y1: Math.min(h, h * 0.17, w * 0.31) };
 
   return { w, h, headerBox, ingredientSlots, subSkillBoxes, natureBox, notes, bars, pills };
 }
