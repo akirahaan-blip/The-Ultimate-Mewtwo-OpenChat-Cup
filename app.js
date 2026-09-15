@@ -9,10 +9,10 @@ import {
   NATURE_SCORES,
   NATURES,
   calculateTotalScore
-} from './scoring.js?v=24';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=24';
-import { analyzeScreenshot } from './ocr.js?v=24';
-import { buildPostText, copyPostText, downloadScoreImage, buildScoreBlob, isTouchDevice } from './share.js?v=24';
+} from './scoring.js?v=25';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=25';
+import { analyzeScreenshot } from './ocr.js?v=25';
+import { buildPostText, copyPostText, downloadScoreImage, buildScoreBlob, isTouchDevice } from './share.js?v=25';
 
 // 現在の状態
 let state = {
@@ -259,6 +259,22 @@ function showImageOverlay(blob, filename) {
   if (overlayUrl) URL.revokeObjectURL(overlayUrl);
   overlayUrl = URL.createObjectURL(blob);
   pic.src = overlayUrl;
+
+  // 「⬇ ダウンロード」は普通のリンク。利用者が自分でタップするので、
+  // AndroidのChromeなどではこれがいちばん確実に保存できる
+  const dl = document.getElementById("imgOverlayDownload");
+  dl.href = overlayUrl;
+  dl.download = filename;
+
+  // LINEの中のブラウザなら、外のブラウザで開き直すボタンを出す。
+  // URLの末尾に openExternalBrowser=1 を付けると、LINEが Chrome / Safari で開いてくれる
+  const inLine = /Line\//i.test(navigator.userAgent);
+  document.getElementById("imgOverlayLine").hidden = !inLine;
+  if (inLine) {
+    const url = new URL(location.href);
+    url.searchParams.set("openExternalBrowser", "1");
+    document.getElementById("imgOverlayExternal").href = url.toString();
+  }
 
   const file = new File([blob], filename, { type: "image/png" });
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));

@@ -867,13 +867,16 @@ button.btn {
   z-index: 1000;
   background: rgba(20, 10, 40, 0.92);
   display: flex;
-  align-items: center;
+  /* 中身が画面より長い時は上から表示してスクロールできるように、
+     短い時は真ん中に来るように（inner の margin:auto で中央寄せ） */
+  align-items: flex-start;
   justify-content: center;
   padding: 16px;
   overflow-y: auto;
 }
 
 .img-overlay-inner {
+  margin: auto;
   width: 100%;
   max-width: 420px;
   display: flex;
@@ -899,4 +902,32 @@ button.btn {
 .img-overlay-btns {
   display: flex;
   gap: 10px;
+}
+
+/* <a> をボタンに見せる（button.btn と同じ見た目） */
+.img-overlay-btns a.btn,
+.img-overlay-line a.btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.img-overlay-line {
+  background: #fff8e6;
+  color: #7a5a00;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.img-overlay-line a.btn {
+  margin-top: 8px;
 }
