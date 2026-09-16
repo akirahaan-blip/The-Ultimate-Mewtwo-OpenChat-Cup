@@ -9,8 +9,8 @@
  * 画面表示とは別に余白や文字サイズを詰めた方が読みやすいため、
  * 同じ内容を Canvas に描き直している。
  */
-import { SUB_SKILLS, INGREDIENTS, INGREDIENT_SCORES, NATURES, NATURE_SCORES } from './scoring.js?v=30';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=30';
+import { SUB_SKILLS, INGREDIENTS, INGREDIENT_SCORES, NATURES, NATURE_SCORES } from './scoring.js?v=31';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=31';
 
 export const HASHTAG = '#最強ミュウツーオプチャ杯';
 

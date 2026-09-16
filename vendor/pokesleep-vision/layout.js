@@ -355,11 +355,16 @@ export function detectLayout(canvas) {
     let bands = toBands(inkRows, 0.02, Math.round(w * 0.008), Math.round(w * 0.012))
       .map(b => ({ y0: secTop + b.start, y1: secTop + b.end + 1 }));
 
-    // オレンジ枠のメインスキルカードは対象外
+    // オレンジ枠のメインスキルカードは対象外。
+    // 「オレンジが多い」だけで判定すると、解放済みの金スキル（黄色いピル）が
+    // 左右に並んだ行まで消えてしまう（実例: リサーチEXPボーナス＋きのみの数S の行）。
+    // カードは高さが幅の約23%あり、ピルの行（約10%）よりはっきり高いので、
+    // 高さも条件に入れる。
     bands = bands.filter(b => {
       let maxOrange = 0;
       for (let y = b.y0; y < b.y1; y++) maxOrange = Math.max(maxOrange, orangeRows[y - secTop]);
-      return maxOrange < 0.45;
+      const tall = (b.y1 - b.y0) >= w * 0.16;
+      return !(tall && maxOrange >= 0.45);
     });
 
     // バッジ・本文・枠線に割れた帯を、ピル1行ぶんに束ね直す
