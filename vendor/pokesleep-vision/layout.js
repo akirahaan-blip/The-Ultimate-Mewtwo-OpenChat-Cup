@@ -103,7 +103,7 @@ function mergeBandsTo(bands, target) {
  * かわりに「横に何画素連続して埋まっているか」で見分ける。
  * バッジはベタ塗りなのでセル幅の1/4ほど連続するが、文字は線なので長くても数十画素。
  */
-function tightTextBox(px, box) {
+function tightTextBox(px, box, ignore = null) {
   const { w, data } = px;
   const x0 = Math.max(0, Math.round(box.x0));
   const x1 = Math.min(w, Math.round(box.x1));
@@ -113,6 +113,8 @@ function tightTextBox(px, box) {
   const bh = y1 - y0;
   if (bw < 4 || bh < 4) return null;
 
+  // ignore … 文字として数えない矩形（画面に浮いているボタンなど）
+  const ignored = (x, y) => ignore && x >= ignore.x0 && x < ignore.x1 && y >= ignore.y0 && y < ignore.y1;
   const isInk = (r, g, b) => luma(r, g, b) < INK_LUMA && !isUiGreen(r, g, b);
   const SOLID_RUN = bw * 0.16; // これ以上続いたらベタ塗り＝文字ではない
 
@@ -123,7 +125,7 @@ function tightTextBox(px, box) {
     let run = 0, maxRun = 0;
     for (let x = 0; x < bw; x++) {
       const i = ((y0 + y) * w + (x0 + x)) * 4;
-      if (isInk(data[i], data[i + 1], data[i + 2])) {
+      if (!ignored(x0 + x, y0 + y) && isInk(data[i], data[i + 1], data[i + 2])) {
         rowInk[y]++;
         total++;
         if (++run > maxRun) maxRun = run;
@@ -158,6 +160,8 @@ function tightTextBox(px, box) {
 
   // 本文の行だけで列方向を測り直す
   const colInk = new Float32Array(bw);
+  // 列方向では ignore を使わない。ボタンは半透明で下の文字が透けているので、
+  // 切り落とすより、ボタンごと切り出してOCRに渡すほうが文字の端（「S」など）を失わない。
   for (let y = best.start; y <= best.end; y++) {
     for (let x = 0; x < bw; x++) {
       const i = ((y0 + y) * w + (x0 + x)) * 4;
@@ -270,6 +274,61 @@ function findIngredientSlots(px, band) {
     if (!slots[best] || c.width > slots[best].width) slots[best] = c;
   }
   return slots.map(s => s ? { x0: s.x0, x1: s.x1, y0, y1 } : null);
+}
+
+// ---------------------------------------------------------------- 浮いているボタン
+
+/**
+ * 画面の右端に浮いている丸いボタン（ゲームの「チャット」など）を探す。
+ * 半透明のグレーの円で、サブスキルのピルに重なって文字を隠すことがある。
+ *
+ * 見つけ方: 指定した縦の範囲で、右端（幅の78%より右）に「グレーの画素が横に長く続く行」を探す。
+ * ピルの文字もグレーだが線なので短く、ピルの背景は白か色付きなのでグレーにならない。
+ * @returns {{x0,x1,y0,y1}|null}
+ */
+function findFloatingButton(px, top, bottom) {
+  const { w, data } = px;
+  const xFrom = Math.round(w * 0.78);
+  const minRun = w * 0.06;
+  const isGray = (r, g, b) => {
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const l = luma(r, g, b);
+    return l >= 120 && l <= 232 && (mx - mn) <= 18;
+  };
+  // 条件を満たす行を「塊」にまとめ、いちばん背の高い塊を円とみなす。
+  // ピルの枠線や影もグレーの横線として引っかかるが、高さが数pxしかないので
+  // 「高さが幅の6%以上」の条件で除ける。
+  const gapTol = w * 0.02;
+  const groups = [];
+  let cur = null;
+  for (let y = Math.round(top); y < Math.round(bottom); y++) {
+    let run = 0, best = 0, bestStart = -1, start = -1;
+    for (let x = xFrom; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (isGray(data[i], data[i + 1], data[i + 2])) {
+        if (run === 0) start = x;
+        run++;
+        if (run > best) { best = run; bestStart = start; }
+      } else {
+        run = 0;
+      }
+    }
+    if (best >= minRun) {
+      if (cur && y - cur.y1 <= gapTol) {
+        cur.y1 = y + 1;
+        if (bestStart < cur.xMin) cur.xMin = bestStart;
+      } else {
+        cur = { y0: y, y1: y + 1, xMin: bestStart };
+        groups.push(cur);
+      }
+    }
+  }
+  let tallest = null;
+  for (const g of groups) if (!tallest || (g.y1 - g.y0) > (tallest.y1 - tallest.y0)) tallest = g;
+  if (!tallest || (tallest.y1 - tallest.y0) < w * 0.06) return null;
+  // 円の縁はぼけていて上下左は少し薄いグレーが残るので、幅の2%ぶん広めに無視する
+  const pad = Math.round(w * 0.02);
+  return { x0: Math.max(0, tallest.xMin - pad), x1: w, y0: tallest.y0 - pad, y1: tallest.y1 + pad };
 }
 
 // ---------------------------------------------------------------- 本体
@@ -396,6 +455,10 @@ export function detectLayout(canvas) {
     const rows = mergeBandsTo(bands, 3).slice(-3);
     notes.push(`サブスキル行 ${rows.map(r => `${r.y0}..${r.y1}`).join(' / ') || 'なし'}`);
 
+    // 右端に浮いているボタンがあれば、その部分は文字として数えない
+    const floating = findFloatingButton(px, secTop, secBottom);
+    if (floating) notes.push(`浮いているボタン x=${floating.x0}.. y=${floating.y0}..${floating.y1} を無視`);
+
     const cols = [
       { x0: w * 0.03, x1: w * 0.495 },
       { x0: w * 0.505, x1: w * 0.97 }
@@ -406,7 +469,7 @@ export function detectLayout(canvas) {
         if (slot > 4) break;
         subSkillBoxes[slot] = tightTextBox(px, {
           x0: cols[c].x0, x1: cols[c].x1, y0: rows[r].y0, y1: rows[r].y1
-        });
+        }, floating);
       }
     }
   } else {

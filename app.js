@@ -9,10 +9,10 @@ import {
   NATURE_SCORES,
   NATURES,
   calculateTotalScore
-} from './scoring.js?v=33';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=33';
-import { analyzeScreenshot } from './ocr.js?v=33';
-import { buildPostText, copyPostText, downloadScoreImage, buildScoreBlob, isTouchDevice } from './share.js?v=33';
+} from './scoring.js?v=38';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=38';
+import { analyzeScreenshot } from './ocr.js?v=38';
+import { buildPostText, copyPostText, downloadScoreImage, buildScoreBlob, isTouchDevice } from './share.js?v=38';
 
 // 現在の状態
 let state = {
