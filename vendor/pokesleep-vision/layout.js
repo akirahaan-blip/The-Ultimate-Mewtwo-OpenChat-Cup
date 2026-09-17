@@ -292,8 +292,33 @@ export function detectLayout(canvas) {
   const realBars = bars.filter(b => b.y0 > 1 && (b.y1 - b.y0) >= minBarH);
   if (realBars.length !== bars.length) notes.push(`上端に接した／細い緑帯を${bars.length - realBars.length}本除外`);
 
-  const skillBar = realBars[0] || null;      // 「メインスキル・サブスキル」
-  const detailBar = realBars[1] || null;     // 「詳細ステータス」
+  // 「メインスキル・サブスキル」の見出しは、そのすぐ下にメインスキルカードがある。
+  // カードの下辺（見出しの約0.29幅ぶん下）は、ほぼ全幅にわたる濃いオレンジの線。
+  // 上に「おてつだい能力」の見出しがまるごと写っているスクショもあるので、
+  // 「1本目」ではなく「下0.4幅以内に全幅（85%以上）のオレンジ線がある最初の見出し」を選ぶ。
+  // ポケモンをタップした時のポップアップの枠もオレンジだが、幅の6割ほどしかないので混ざらない。
+  // 見つからなければ従来どおり1本目。
+  const hasOrangeBelow = bar => {
+    const from = bar.y1, to = Math.min(h, bar.y1 + w * 0.40);
+    const xs = Math.round(w * 0.05), xe = Math.round(w * 0.95);
+    const step = Math.max(1, Math.round(w / 320));
+    for (let y = from; y < to; y++) {
+      let orange = 0, n = 0;
+      for (let x = xs; x < xe; x += step) {
+        const i = (y * w + x) * 4;
+        n++;
+        if (isCardOrange(px.data[i], px.data[i + 1], px.data[i + 2])) orange++;
+      }
+      if (n && orange / n >= 0.85) return true;
+    }
+    return false;
+  };
+  let skillIdx = realBars.findIndex(hasOrangeBelow);
+  if (skillIdx < 0) skillIdx = 0;
+  else if (skillIdx > 0) notes.push(`上の見出し${skillIdx}本を読み飛ばし（サブスキルの見出しは${skillIdx + 1}本目）`);
+
+  const skillBar = realBars[skillIdx] || null;       // 「メインスキル・サブスキル」
+  const detailBar = realBars[skillIdx + 1] || null;  // 「詳細ステータス」
 
   // ---- 食材の行 -----------------------------------------------------------
   // 見出しバーより上のラベルピルは、上から きのみ / 食材 / おてつだい時間 / 最大所持数。
