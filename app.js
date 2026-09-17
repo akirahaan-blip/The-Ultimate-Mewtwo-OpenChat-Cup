@@ -9,10 +9,10 @@ import {
   NATURE_SCORES,
   NATURES,
   calculateTotalScore
-} from './scoring.js?v=38';
-import { INGREDIENT_LIST } from './ingredients-setting.js?v=38';
-import { analyzeScreenshot } from './ocr.js?v=38';
-import { buildPostText, copyPostText, downloadScoreImage, buildScoreBlob, isTouchDevice } from './share.js?v=38';
+} from './scoring.js?v=39';
+import { INGREDIENT_LIST } from './ingredients-setting.js?v=39';
+import { analyzeScreenshot } from './ocr.js?v=39';
+import { buildPostText, copyPostText, downloadScoreImage, buildScoreBlob, isTouchDevice } from './share.js?v=39';
 
 // 現在の状態
 let state = {
@@ -206,6 +206,9 @@ function bindEvents() {
     setTimeout(() => { shareImgBtn.textContent = label; shareImgBtn.disabled = false; }, 1800);
   });
 
+  // 600点突破の演出は、どこをタップしても閉じる
+  document.getElementById("mewCelebrate").addEventListener("click", hideCelebration);
+
   // 画像オーバーレイの「閉じる」（幕の外側をタップしても閉じる）
   const imgOverlay = document.getElementById("imgOverlay");
   document.getElementById("imgOverlayClose").addEventListener("click", hideImageOverlay);
@@ -376,6 +379,33 @@ function updateLamps(totalScore) {
   lampLit = lit;
 
   lamps.forEach(el => el.classList.toggle("lit", lit));
+
+  // 点いた瞬間だけ、画面いっぱいの演出も出す
+  if (lit) showCelebration(totalScore);
+}
+
+/**
+ * 600点突破の演出（画面いっぱい）。
+ * ヘッダーのミュウは画面の上にあって、解析後に下を見ている人には見えないため。
+ * タップで閉じる。放っておいても数秒で閉じる。
+ */
+let celebrateTimer = null;
+function showCelebration(totalScore) {
+  const el = document.getElementById("mewCelebrate");
+  if (!el) return;
+  document.getElementById("mewCelebrateScore").textContent = totalScore;
+  // hidden を付け直してから外すと、出現アニメーションが毎回頭から流れる
+  el.hidden = true;
+  void el.offsetWidth;
+  el.hidden = false;
+  clearTimeout(celebrateTimer);
+  celebrateTimer = setTimeout(hideCelebration, 7000);
+}
+
+function hideCelebration() {
+  clearTimeout(celebrateTimer);
+  const el = document.getElementById("mewCelebrate");
+  if (el) el.hidden = true;
 }
 
 /**

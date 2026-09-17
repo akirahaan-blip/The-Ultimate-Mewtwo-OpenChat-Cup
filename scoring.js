@@ -5,8 +5,8 @@
  * vendor/pokesleep-vision のマスタデータを使う。
  * ここに持つのは大会の配点だけにして、名前を二重管理しないようにしている。
  */
-import { SUB_SKILLS as SUB_SKILL_MASTER, NATURES as NATURE_MASTER } from './vendor/pokesleep-vision/gamedata.js?v=38';
-import { INGREDIENT_BY_CODE } from './ingredients-setting.js?v=38';
+import { SUB_SKILLS as SUB_SKILL_MASTER, NATURES as NATURE_MASTER } from './vendor/pokesleep-vision/gamedata.js?v=39';
+import { INGREDIENT_BY_CODE } from './ingredients-setting.js?v=39';
 
 // サブスキルの大会配点（2026-09-13 ミュウツー配点表）。
 // isGold は「オール金スキルボーナス」、isBlue は「地球は青かった」の対象かどうか
