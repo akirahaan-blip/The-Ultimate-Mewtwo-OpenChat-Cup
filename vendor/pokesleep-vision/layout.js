@@ -186,13 +186,16 @@ function tightTextBox(px, box, ignore = null) {
 
 // ---------------------------------------------------------------- 緑パーツ検出
 
-/** 全幅の見出しバーと、左寄せのラベルピルを拾う */
-function findGreenParts(px) {
+/**
+ * 全幅の見出しバーと、左寄せのラベルピルを拾う
+ * @param {{x0:number,x1:number,w:number}} geo ゲーム画面の横の範囲（タブレットは左右に余白がある）
+ */
+function findGreenParts(px, geo) {
   const { w, h, data } = px;
-  const step = Math.max(1, Math.round(w / 320));
-  const xStart = Math.round(w * 0.02);
-  const xEnd = Math.round(w * 0.98);
-  const leftLimit = w * 0.42;
+  const step = Math.max(1, Math.round(geo.w / 320));
+  const xStart = Math.round(geo.x0 + geo.w * 0.02);
+  const xEnd = Math.round(geo.x0 + geo.w * 0.98);
+  const leftLimit = geo.x0 + geo.w * 0.42;
 
   const fullRatio = new Float32Array(h);
   const leftShare = new Float32Array(h);
@@ -211,8 +214,8 @@ function findGreenParts(px) {
     leftShare[y] = total ? left / total : 0;
   }
 
-  const minH = Math.max(3, Math.round(w * 0.006));
-  const gap = Math.max(2, Math.round(w * 0.004));
+  const minH = Math.max(3, Math.round(geo.w * 0.006));
+  const gap = Math.max(2, Math.round(geo.w * 0.004));
 
   const barRows = new Float32Array(h);
   const pillRows = new Float32Array(h);
@@ -234,17 +237,18 @@ function findGreenParts(px) {
  * 食材ラベルの行から、アイコンが並んでいる列を探して
  * Lv.1 / Lv.30 / Lv.60 の3スロットの矩形を返す
  */
-function findIngredientSlots(px, band) {
+function findIngredientSlots(px, band, geo) {
   const { w, h, data } = px;
   const y0 = Math.max(0, Math.round(band.y0));
   const y1 = Math.min(h, Math.round(band.y1));
-  const xFrom = Math.round(w * 0.30);
-  const step = Math.max(1, Math.round(w / 500));
+  const xFrom = Math.round(geo.x0 + geo.w * 0.30);
+  const xTo = Math.min(w, Math.round(geo.x1));
+  const step = Math.max(1, Math.round(geo.w / 500));
 
   // アイコン台座の淡いクリーム円（#FFFEF0 系）と、色の付いた画素の両方を数える
   const colScore = new Float32Array(w);
   for (let y = y0; y < y1; y += step) {
-    for (let x = xFrom; x < w; x++) {
+    for (let x = xFrom; x < xTo; x++) {
       const i = (y * w + x) * 4;
       const r = data[i], g = data[i + 1], b = data[i + 2];
       const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
@@ -256,21 +260,21 @@ function findIngredientSlots(px, band) {
 
   const peak = Math.max(...colScore);
   if (peak <= 0) return [null, null, null];
-  const cols = toBands(colScore, peak * 0.25, Math.round(w * 0.02), Math.round(w * 0.012))
+  const cols = toBands(colScore, peak * 0.25, Math.round(geo.w * 0.02), Math.round(geo.w * 0.012))
     .map(c => ({ x0: c.start, x1: c.end + 1, width: c.end - c.start }))
-    .filter(c => c.width >= w * 0.05);   // ×2 バッジの縁など小さすぎる塊は捨てる
+    .filter(c => c.width >= geo.w * 0.05);   // ×2 バッジの縁など小さすぎる塊は捨てる
 
   // 見つかった列を「左から順に Lv.1 / Lv.30 / Lv.60」と決めつけない。
   // Lv.1 のアイコンはポップアップに隠れて見つからないことがあり、
   // その時に Lv.30 のアイコンを Lv.1 と取り違えてしまうため。
   // 3スロットの中心は幅の約 0.50 / 0.66 / 0.82 の位置なので、いちばん近い枠に割り当てる。
-  const centers = [0.50, 0.66, 0.82].map(r => r * w);
+  const centers = [0.50, 0.66, 0.82].map(r => geo.x0 + r * geo.w);
   const slots = [null, null, null];
   for (const c of cols) {
     const cx = (c.x0 + c.x1) / 2;
     let best = 0;
     for (let i = 1; i < 3; i++) if (Math.abs(cx - centers[i]) < Math.abs(cx - centers[best])) best = i;
-    if (Math.abs(cx - centers[best]) > w * 0.08) continue;   // どの枠からも遠いものは無視
+    if (Math.abs(cx - centers[best]) > geo.w * 0.08) continue;   // どの枠からも遠いものは無視
     if (!slots[best] || c.width > slots[best].width) slots[best] = c;
   }
   return slots.map(s => s ? { x0: s.x0, x1: s.x1, y0, y1 } : null);
@@ -286,10 +290,10 @@ function findIngredientSlots(px, band) {
  * ピルの文字もグレーだが線なので短く、ピルの背景は白か色付きなのでグレーにならない。
  * @returns {{x0,x1,y0,y1}|null}
  */
-function findFloatingButton(px, top, bottom) {
+function findFloatingButton(px, top, bottom, geo) {
   const { w, data } = px;
-  const xFrom = Math.round(w * 0.78);
-  const minRun = w * 0.06;
+  const xFrom = Math.round(geo.x0 + geo.w * 0.78);
+  const minRun = geo.w * 0.06;
   const isGray = (r, g, b) => {
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
     const l = luma(r, g, b);
@@ -298,7 +302,7 @@ function findFloatingButton(px, top, bottom) {
   // 条件を満たす行を「塊」にまとめ、いちばん背の高い塊を円とみなす。
   // ピルの枠線や影もグレーの横線として引っかかるが、高さが数pxしかないので
   // 「高さが幅の6%以上」の条件で除ける。
-  const gapTol = w * 0.02;
+  const gapTol = geo.w * 0.02;
   const groups = [];
   let cur = null;
   for (let y = Math.round(top); y < Math.round(bottom); y++) {
@@ -325,9 +329,9 @@ function findFloatingButton(px, top, bottom) {
   }
   let tallest = null;
   for (const g of groups) if (!tallest || (g.y1 - g.y0) > (tallest.y1 - tallest.y0)) tallest = g;
-  if (!tallest || (tallest.y1 - tallest.y0) < w * 0.06) return null;
+  if (!tallest || (tallest.y1 - tallest.y0) < geo.w * 0.06) return null;
   // 円の縁はぼけていて上下左は少し薄いグレーが残るので、幅の2%ぶん広めに無視する
-  const pad = Math.round(w * 0.02);
+  const pad = Math.round(geo.w * 0.02);
   return { x0: Math.max(0, tallest.xMin - pad), x1: w, y0: tallest.y0 - pad, y1: tallest.y1 + pad };
 }
 
@@ -340,14 +344,41 @@ export function detectLayout(canvas) {
   const px = readPixels(canvas);
   const { w, h } = px;
   const notes = [];
-  const { bars, pills, fullRatio } = findGreenParts(px);
+
+  // ---- ゲーム画面の横の範囲を先に決める -----------------------------------
+  // タブレットのように横長の画面では、ゲームの表示が中央に寄って左右に余白ができる。
+  // 以降の位置はすべて「画像の幅」ではなく「この範囲の幅」を基準にしないとずれる。
+  // 見出しバーは必ずゲーム画面の端から端まであるので、その左右端を測って範囲とする。
+  let geo = { x0: 0, x1: w, w };
+  const rough = findGreenParts(px, geo);
+  if (rough.bars.length) {
+    let x0 = w, x1 = 0;
+    for (const bar of rough.bars) {
+      const y = Math.round((bar.y0 + bar.y1) / 2);
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (isUiGreen(px.data[i], px.data[i + 1], px.data[i + 2])) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+        }
+      }
+    }
+    // 端まで届いている（＝ほんとうに見出しバー）ものだけを信じる。
+    // 幅の6割未満しかないなら測り損ねなので、画像の幅をそのまま使う。
+    if (x1 - x0 >= w * 0.6) geo = { x0, x1: x1 + 1, w: x1 + 1 - x0 };
+  }
+  if (geo.w < w * 0.97) {
+    notes.push(`ゲーム画面は x=${geo.x0}..${geo.x1}（幅${geo.w}）。左右の余白ぶんを補正`);
+  }
+
+  const { bars, pills, fullRatio } = findGreenParts(px, geo);
 
   notes.push(`緑バー ${bars.length}本 / 緑ピル ${pills.length}個`);
 
   // 画像のいちばん上に、前の見出し（「おてつだい能力」など）の下端だけが
   // 写り込むことがある。上端に接している細い帯は見出しバーとして数えない。
   // 本物の見出しバーは幅の約5.5%の高さがある。
-  const minBarH = w * 0.03;
+  const minBarH = geo.w * 0.03;
   const realBars = bars.filter(b => b.y0 > 1 && (b.y1 - b.y0) >= minBarH);
   if (realBars.length !== bars.length) notes.push(`上端に接した／細い緑帯を${bars.length - realBars.length}本除外`);
 
@@ -358,9 +389,9 @@ export function detectLayout(canvas) {
   // ポケモンをタップした時のポップアップの枠もオレンジだが、幅の6割ほどしかないので混ざらない。
   // 見つからなければ従来どおり1本目。
   const hasOrangeBelow = bar => {
-    const from = bar.y1, to = Math.min(h, bar.y1 + w * 0.40);
-    const xs = Math.round(w * 0.05), xe = Math.round(w * 0.95);
-    const step = Math.max(1, Math.round(w / 320));
+    const from = bar.y1, to = Math.min(h, bar.y1 + geo.w * 0.40);
+    const xs = Math.round(geo.x0 + geo.w * 0.05), xe = Math.round(geo.x0 + geo.w * 0.95);
+    const step = Math.max(1, Math.round(geo.w / 320));
     for (let y = from; y < to; y++) {
       let orange = 0, n = 0;
       for (let x = xs; x < xe; x += step) {
@@ -391,10 +422,10 @@ export function detectLayout(canvas) {
     const timePill = abovePills[abovePills.length - 2];  // おてつだい時間
     const bagPill = abovePills[abovePills.length - 1];   // 最大所持数
     const pitch = bagPill.y0 - timePill.y0;
-    if (pitch > w * 0.08 && pitch < w * 0.18) {
+    if (pitch > geo.w * 0.08 && pitch < geo.w * 0.18) {
       const rowTop = Math.max(0, timePill.y0 - pitch * 1.75);
       const rowBottom = timePill.y0 - pitch * 0.3;
-      ingredientSlots = findIngredientSlots(px, { y0: rowTop, y1: rowBottom });
+      ingredientSlots = findIngredientSlots(px, { y0: rowTop, y1: rowBottom }, geo);
       notes.push(`食材行 y=${Math.round(rowTop)}..${Math.round(rowBottom)} スロット${ingredientSlots.filter(Boolean).length}個 (${ingredientSlots.map(s => s ? 'o' : 'x').join('')})`);
     } else {
       notes.push(`食材行を特定できず（ラベルピルの間隔 ${Math.round(pitch)}px が想定外）`);
@@ -408,15 +439,15 @@ export function detectLayout(canvas) {
   if (skillBar) {
     const secTop = skillBar.y1;
     const secBottom = detailBar ? detailBar.y0 : h;
-    const step = Math.max(1, Math.round(w / 320));
-    const xs = Math.round(w * 0.03), xe = Math.round(w * 0.97);
+    const step = Math.max(1, Math.round(geo.w / 320));
+    const xs = Math.round(geo.x0 + geo.w * 0.03), xe = Math.round(geo.x0 + geo.w * 0.97);
     // 「文字がある行」の検出は左の列（幅の49.5%まで）だけで行う。
     // 右端にはゲームの「チャット」などの丸いボタンが浮いていることがあり、
     // 行と行のすき間を埋めて1つの行に見せてしまうため。
     // 左の列には3行とも必ずピルがある（Lv.10 / Lv.50 / Lv.80）。
     // ただしメインスキルカードの「オレンジの枠」は全幅で数える。
     // 左の列だけだとカードの枠線が薄く見えて、カードの本文を行と間違えるため。
-    const xeInk = Math.round(w * 0.495);
+    const xeInk = Math.round(geo.x0 + geo.w * 0.495);
 
     const inkRows = new Float32Array(secBottom - secTop);
     const orangeRows = new Float32Array(secBottom - secTop);
@@ -436,7 +467,7 @@ export function detectLayout(canvas) {
       orangeRows[y - secTop] = n ? orange / n : 0;
     }
 
-    let bands = toBands(inkRows, 0.02, Math.round(w * 0.008), Math.round(w * 0.012))
+    let bands = toBands(inkRows, 0.02, Math.round(geo.w * 0.008), Math.round(geo.w * 0.012))
       .map(b => ({ y0: secTop + b.start, y1: secTop + b.end + 1 }));
 
     // オレンジ枠のメインスキルカードは対象外。
@@ -447,7 +478,7 @@ export function detectLayout(canvas) {
     bands = bands.filter(b => {
       let maxOrange = 0;
       for (let y = b.y0; y < b.y1; y++) maxOrange = Math.max(maxOrange, orangeRows[y - secTop]);
-      const tall = (b.y1 - b.y0) >= w * 0.16;
+      const tall = (b.y1 - b.y0) >= geo.w * 0.16;
       return !(tall && maxOrange >= 0.45);
     });
 
@@ -456,12 +487,12 @@ export function detectLayout(canvas) {
     notes.push(`サブスキル行 ${rows.map(r => `${r.y0}..${r.y1}`).join(' / ') || 'なし'}`);
 
     // 右端に浮いているボタンがあれば、その部分は文字として数えない
-    const floating = findFloatingButton(px, secTop, secBottom);
+    const floating = findFloatingButton(px, secTop, secBottom, geo);
     if (floating) notes.push(`浮いているボタン x=${floating.x0}.. y=${floating.y0}..${floating.y1} を無視`);
 
     const cols = [
-      { x0: w * 0.03, x1: w * 0.495 },
-      { x0: w * 0.505, x1: w * 0.97 }
+      { x0: geo.x0 + geo.w * 0.03, x1: geo.x0 + geo.w * 0.495 },
+      { x0: geo.x0 + geo.w * 0.505, x1: geo.x0 + geo.w * 0.97 }
     ];
     for (let r = 0; r < rows.length; r++) {
       for (let c = 0; c < 2; c++) {
@@ -484,12 +515,12 @@ export function detectLayout(canvas) {
   if (detailBar) {
     const naturePill = pills.find(p => p.y0 >= detailBar.y1);
     const searchTop = naturePill ? naturePill.y1 : detailBar.y1;
-    let searchBottom = Math.min(h, searchTop + w * 0.105);
-    const limit = Math.min(h, searchTop + Math.round(w * 0.16));
-    for (let y = searchTop + Math.round(w * 0.02); y < limit; y++) {
+    let searchBottom = Math.min(h, searchTop + geo.w * 0.105);
+    const limit = Math.min(h, searchTop + Math.round(geo.w * 0.16));
+    for (let y = searchTop + Math.round(geo.w * 0.02); y < limit; y++) {
       if (fullRatio[y] >= 0.05) { searchBottom = y; break; }
     }
-    natureBox = tightTextBox(px, { x0: w * 0.04, x1: w * 0.50, y0: searchTop, y1: searchBottom });
+    natureBox = tightTextBox(px, { x0: geo.x0 + geo.w * 0.04, x1: geo.x0 + geo.w * 0.50, y0: searchTop, y1: searchBottom });
     notes.push(`せいかく探索 y=${Math.round(searchTop)}..${Math.round(searchBottom)} → ${natureBox ? 'ok' : '見つからず'}`);
   } else {
     notes.push('「詳細ステータス」の見出しバーが見つからず');
@@ -505,9 +536,14 @@ export function detectLayout(canvas) {
   // 上は幅の11%から。その上はOSのステータスバー（時刻「15:19」など）で、
   // 数字として読まれるとSPの候補と混ざって決められなくなる。
   // ポップアップは幅の約13%から始まり、SPの数字は約17〜21%の高さにあるので切れない。
-  const headerBox = { x0: w * 0.02, x1: w * 0.58, y0: Math.max(h * 0.03, w * 0.11), y1: Math.min(h, h * 0.17, w * 0.31) };
+  const headerBox = {
+    x0: geo.x0 + geo.w * 0.02,
+    x1: geo.x0 + geo.w * 0.58,
+    y0: Math.max(h * 0.03, geo.w * 0.11),
+    y1: Math.min(h, h * 0.17, geo.w * 0.31)
+  };
 
-  return { w, h, headerBox, ingredientSlots, subSkillBoxes, natureBox, notes, bars, pills };
+  return { w, h, geo, headerBox, ingredientSlots, subSkillBoxes, natureBox, notes, bars, pills };
 }
 
 export { readPixels, isUiGreen, isCardOrange, isLockBadge };

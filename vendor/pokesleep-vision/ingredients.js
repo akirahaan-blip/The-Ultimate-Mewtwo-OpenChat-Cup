@@ -26,7 +26,7 @@
  *   ・classifyIngredientSlot に候補名の絞り込み（candidates）を追加
  */
 
-import { isLockBadge } from './layout.js?v=25';
+import { isLockBadge } from './layout.js?v=26';
 
 export const HUE_BINS = 24;
 
